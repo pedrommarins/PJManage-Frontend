@@ -22,6 +22,7 @@ export default function Agendamentos() {
   const [pesquisa, setPesquisa] = useState("");
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
   const [filtroData, setFiltroData] = useState("");
   const [filtroProfissional, setFiltroProfissional] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
@@ -80,6 +81,27 @@ export default function Agendamentos() {
     setFiltroCliente("");
   }
 
+  function handleEditar(a) {
+    setEditandoId(a.id);
+    setPesquisa(a.cliente?.nome || "");
+    setForm({
+      clienteId: a.cliente?.id || "",
+      clienteNome: a.cliente?.nome || "",
+      servicoId: a.servico?.id || "",
+      profissionalId: a.profissional?.id || "",
+      dataHora: a.dataHora ? a.dataHora.substring(0, 16) : "",
+      status: a.status,
+      observacoes: a.observacoes || "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelarEdicao() {
+    setEditandoId(null);
+    setForm({ clienteId: "", clienteNome: "", servicoId: "", profissionalId: "", dataHora: "", status: "CONFIRMADO", observacoes: "" });
+    setPesquisa("");
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.clienteId) {
@@ -88,14 +110,20 @@ export default function Agendamentos() {
     }
     setLoading(true);
     try {
-      await post("/agendamentos", {
+      const body = {
         cliente: { id: parseInt(form.clienteId) },
         servico: { id: parseInt(form.servicoId) },
         profissional: { id: parseInt(form.profissionalId) },
         dataHora: form.dataHora,
-        status: form.status,
+        status: editandoId ? form.status : "CONFIRMADO",
         observacoes: form.observacoes,
-      });
+      };
+      if (editandoId) {
+        await put(`/agendamentos/${editandoId}`, body);
+        setEditandoId(null);
+      } else {
+        await post("/agendamentos", body);
+      }
       setForm({ clienteId: "", clienteNome: "", servicoId: "", profissionalId: "", dataHora: "", status: "CONFIRMADO", observacoes: "" });
       setPesquisa("");
       await carregar(pagina);
@@ -142,7 +170,9 @@ export default function Agendamentos() {
       {erro && <p className="text-red-500 mb-4">{erro}</p>}
 
       <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-        <h3 className="text-lg font-medium text-gray-700 mb-4">Novo agendamento</h3>
+        <h3 className="text-lg font-medium text-gray-700 mb-4">
+          {editandoId ? "Editar agendamento" : "Novo agendamento"}
+        </h3>
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
           <div className="relative col-span-2">
             <input
@@ -210,16 +240,18 @@ export default function Agendamentos() {
             required
           />
 
-          <select
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="CONFIRMADO">Confirmado</option>
-            <option value="PENDENTE">Pendente</option>
-            <option value="CANCELADO">Cancelado</option>
-            <option value="CONCLUIDO">Concluído</option>
-          </select>
+          {editandoId && (
+            <select
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="CONFIRMADO">Confirmado</option>
+              <option value="PENDENTE">Pendente</option>
+              <option value="CANCELADO">Cancelado</option>
+              <option value="CONCLUIDO">Concluído</option>
+            </select>
+          )}
 
           <input
             type="text"
@@ -229,13 +261,24 @@ export default function Agendamentos() {
             className="col-span-2 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition disabled:opacity-50"
-          >
-            {loading ? "A guardar..." : "Adicionar agendamento"}
-          </button>
+          <div className={editandoId ? "col-span-2 flex gap-2" : "col-span-2"}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition disabled:opacity-50"
+            >
+              {loading ? "A guardar..." : editandoId ? "Guardar alterações" : "Adicionar agendamento"}
+            </button>
+            {editandoId && (
+              <button
+                type="button"
+                onClick={handleCancelarEdicao}
+                className="px-6 border border-gray-300 text-gray-600 font-medium py-2 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -322,6 +365,12 @@ export default function Agendamentos() {
                       Concluir
                     </button>
                   )}
+                  <button
+                    onClick={() => handleEditar(a)}
+                    className="text-gray-500 hover:text-gray-700 text-xs font-medium"
+                  >
+                    Editar
+                  </button>
                   <button
                     onClick={() => handleApagar(a.id)}
                     className="text-red-500 hover:text-red-700 text-xs font-medium"
