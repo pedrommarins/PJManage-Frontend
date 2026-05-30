@@ -13,72 +13,116 @@ function handle401() {
   window.dispatchEvent(new CustomEvent("auth:logout"));
 }
 
+async function parseResponse(response) {
+  const text = await response.text();
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return null; }
+}
+
 export async function login(codigo, senha) {
-  const response = await fetch(`${BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ codigo, senha }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.erro || "Erro ao fazer login");
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigo, senha }),
+    });
+  } catch {
+    throw new Error("Sem ligação ao servidor. Verifica a tua ligação à internet.");
+  }
+  const data = await parseResponse(response);
+  if (!data) throw new Error("O servidor não respondeu. Aguarda uns segundos e tenta novamente.");
+  if (!response.ok) throw new Error(data.erro || data.message || "Código ou senha incorretos.");
   return data;
 }
 
 export async function primeiroAcesso(codigo, senha) {
-  const response = await fetch(`${BASE_URL}/auth/primeiro-acesso`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ codigo, senha }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.erro || "Erro ao definir senha");
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/auth/primeiro-acesso`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigo, senha }),
+    });
+  } catch {
+    throw new Error("Sem ligação ao servidor.");
+  }
+  const data = await parseResponse(response);
+  if (!response.ok) throw new Error((data && (data.erro || data.message)) || "Erro ao definir senha");
   return data;
 }
 
 export async function get(path) {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+  } catch {
+    throw new Error("Sem ligação ao servidor.");
+  }
   if (response.status === 401) { handle401(); throw new Error("Sessão expirada. Faz login novamente."); }
-  if (!response.ok) throw new Error("Erro ao carregar dados");
-  return response.json();
+  if (!response.ok) {
+    const data = await parseResponse(response);
+    throw new Error((data && (data.erro || data.message)) || "Erro ao carregar dados.");
+  }
+  const data = await parseResponse(response);
+  return data ?? [];
 }
 
 export async function post(path, body) {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
-    },
-    body: JSON.stringify(body),
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Sem ligação ao servidor.");
+  }
   if (response.status === 401) { handle401(); throw new Error("Sessão expirada. Faz login novamente."); }
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.erro || "Erro ao guardar");
+  const data = await parseResponse(response);
+  if (!response.ok) throw new Error((data && (data.erro || data.message)) || "Erro ao guardar.");
   return data;
 }
 
 export async function put(path, body) {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
-    },
-    body: JSON.stringify(body),
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Sem ligação ao servidor.");
+  }
   if (response.status === 401) { handle401(); throw new Error("Sessão expirada. Faz login novamente."); }
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.erro || "Erro ao atualizar");
+  const data = await parseResponse(response);
+  if (!response.ok) throw new Error((data && (data.erro || data.message)) || "Erro ao atualizar.");
   return data;
 }
 
 export async function del(path) {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${getToken()}` },
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+  } catch {
+    throw new Error("Sem ligação ao servidor.");
+  }
   if (response.status === 401) { handle401(); throw new Error("Sessão expirada. Faz login novamente."); }
-  if (!response.ok) throw new Error("Erro ao apagar");
+  if (!response.ok) {
+    const data = await parseResponse(response);
+    throw new Error((data && (data.erro || data.message)) || "Erro ao apagar.");
+  }
 }

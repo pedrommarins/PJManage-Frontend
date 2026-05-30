@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardHome from "./DashboardHome";
 import Agendamentos from "./Agendamentos";
@@ -24,8 +25,8 @@ function Icon({ id, className = "w-4 h-4 shrink-0" }) {
     comunicacao:    ["M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"],
     ferramentas:    ["M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"],
     logout:         ["M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"],
-    chevronDown:    ["M19 9l-7 7-7-7"],
-    chevronRight:   ["M9 5l7 7-7 7"],
+    menu:           ["M4 6h16M4 12h16M4 18h16"],
+    x:              ["M6 18L18 6M6 6l12 12"],
   };
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
@@ -79,6 +80,7 @@ const menu = [
 export default function Dashboard({ onLogout, userNome }) {
   const { pagina = "inicio" } = useParams();
   const navigate = useNavigate();
+  const [sidebarAberta, setSidebarAberta] = useState(false);
 
   const nivelRaw = localStorage.getItem("nivel");
   const nivel = nivelRaw === null || nivelRaw === "" ? 0 : Number(nivelRaw);
@@ -91,106 +93,142 @@ export default function Dashboard({ onLogout, userNome }) {
   });
   const pode = (id) => paginasPermitidas.has(id);
 
-  function ir(id) { navigate("/" + id); }
+  function ir(id) {
+    navigate("/" + id);
+    setSidebarAberta(false);
+  }
 
   const inicial = (userNome || "U").charAt(0).toUpperCase();
   const pageTitle = PAGE_TITLES[pagina] || "Painel";
   const dataHoje = new Date().toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" });
 
+  const sidebarContent = (
+    <>
+      {/* Logo */}
+      <div className="px-5 py-5 border-b border-white/5">
+        <img src="/logo.png" alt="PJManage" className="w-full h-auto brightness-0 invert opacity-90" />
+      </div>
+
+      {/* Navegação */}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
+        {menu.map((item) => {
+          if (!item.items) {
+            const ativo = pagina === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => ir(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  ativo
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
+                    : "text-slate-400 hover:bg-white/8 hover:text-slate-100"
+                }`}
+              >
+                <Icon id={item.icon} />
+                {item.label}
+              </button>
+            );
+          }
+
+          if (!podeVer(item)) return null;
+
+          return (
+            <div key={item.label} className="pt-4">
+              <p className="px-3 mb-1.5 text-xs font-semibold text-slate-600 uppercase tracking-widest">
+                {item.label}
+              </p>
+              {item.items.map((sub) => {
+                const ativo = pagina === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    onClick={() => ir(sub.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      ativo
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
+                        : "text-slate-400 hover:bg-white/8 hover:text-slate-100"
+                    }`}
+                  >
+                    <Icon id={sub.icon} />
+                    {sub.label}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* Utilizador */}
+      <div className="px-3 pb-4 pt-2 border-t border-white/5">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
+          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+            {inicial}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-200 truncate">{userNome || "Utilizador"}</p>
+            <p className="text-xs text-slate-500 truncate">Disponível</p>
+          </div>
+          <button
+            onClick={() => { navigate("/"); onLogout(); }}
+            title="Sair"
+            className="text-slate-500 hover:text-red-400 transition p-1 rounded"
+          >
+            <Icon id="logout" className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* ---- Sidebar ---- */}
-      <aside className="w-60 bg-slate-900 flex flex-col fixed inset-y-0 left-0 z-30">
-        {/* Logo */}
-        <div className="px-5 py-5 border-b border-white/5">
-          <img src="/logo.png" alt="PJManage" className="h-28 w-auto brightness-0 invert opacity-90" />
-        </div>
-
-        {/* Navegação */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
-          {menu.map((item) => {
-            if (!item.items) {
-              const ativo = pagina === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => ir(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    ativo
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
-                      : "text-slate-400 hover:bg-white/8 hover:text-slate-100"
-                  }`}
-                >
-                  <Icon id={item.icon} />
-                  {item.label}
-                </button>
-              );
-            }
-
-            if (!podeVer(item)) return null;
-
-            const grupoAtivo = item.items.some((s) => s.id === pagina);
-
-            return (
-              <div key={item.label} className="pt-4">
-                <p className="px-3 mb-1.5 text-xs font-semibold text-slate-600 uppercase tracking-widest">
-                  {item.label}
-                </p>
-                {item.items.map((sub) => {
-                  const ativo = pagina === sub.id;
-                  return (
-                    <button
-                      key={sub.id}
-                      onClick={() => ir(sub.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        ativo
-                          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
-                          : "text-slate-400 hover:bg-white/8 hover:text-slate-100"
-                      }`}
-                    >
-                      <Icon id={sub.icon} />
-                      {sub.label}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Utilizador */}
-        <div className="px-3 pb-4 pt-2 border-t border-white/5">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-              {inicial}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-200 truncate">{userNome || "Utilizador"}</p>
-              <p className="text-xs text-slate-500 truncate">Disponível</p>
-            </div>
-            <button
-              onClick={() => { navigate("/"); onLogout(); }}
-              title="Sair"
-              className="text-slate-500 hover:text-red-400 transition p-1 rounded"
-            >
-              <Icon id="logout" className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {/* ---- Sidebar desktop (sempre visível em md+) ---- */}
+      <aside className="hidden md:flex w-60 bg-slate-900 flex-col fixed inset-y-0 left-0 z-30">
+        {sidebarContent}
       </aside>
 
+      {/* ---- Sidebar mobile (overlay) ---- */}
+      {sidebarAberta && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setSidebarAberta(false)}
+          />
+          {/* Painel */}
+          <aside className="relative w-72 max-w-[85vw] bg-slate-900 flex flex-col z-50">
+            <button
+              onClick={() => setSidebarAberta(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1"
+            >
+              <Icon id="x" className="w-5 h-5" />
+            </button>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+
       {/* ---- Área principal ---- */}
-      <div className="flex-1 ml-60 flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
         {/* Topbar */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
-          <div>
+        <header className="bg-white border-b border-slate-200 px-4 md:px-8 py-4 flex items-center justify-between sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            {/* Hamburger só em mobile */}
+            <button
+              className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition"
+              onClick={() => setSidebarAberta(true)}
+              aria-label="Abrir menu"
+            >
+              <Icon id="menu" className="w-5 h-5" />
+            </button>
             <h1 className="text-lg font-semibold text-slate-800">{pageTitle}</h1>
           </div>
-          <p className="text-sm text-slate-400 capitalize">{dataHoje}</p>
+          <p className="text-sm text-slate-400 capitalize hidden sm:block">{dataHoje}</p>
         </header>
 
         {/* Conteúdo */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8">
           {pagina === "inicio"        && <DashboardHome />}
           {pagina === "agendamentos"  && <Agendamentos />}
           {pode("relatorios")    && pagina === "relatorios"    && <Relatorios />}

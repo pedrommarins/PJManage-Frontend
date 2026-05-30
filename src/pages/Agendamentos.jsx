@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { get, post, put, del } from "../services/api";
 import Spinner from "../components/Spinner";
+import ConfirmModal from "../components/ConfirmModal";
 import {
   HistoricoModal, FichasModal, PontosModal, ContaModal, NovoClienteModal,
 } from "../components/ClienteModais";
@@ -28,18 +29,22 @@ export default function Agendamentos() {
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [loadingStatusId, setLoadingStatusId] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
   const [filtroData, setFiltroData] = useState("");
   const [filtroProfissional, setFiltroProfissional] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
+  const [confirmarApagarId, setConfirmarApagarId] = useState(null);
+  const [loadingApagar, setLoadingApagar] = useState(false);
 
   // Modais de cliente
-  const [modalCliente, setModalCliente] = useState(null); // 'fichas'|'pontos'|'conta'|'historico'
+  const [modalCliente, setModalCliente] = useState(null);
   const [novoClienteAberto, setNovoClienteAberto] = useState(false);
 
   async function carregar(p = pagina) {
     setCarregando(true);
+    setErro("");
     try {
       const [ag, cl, sv, pr] = await Promise.all([
         get(`/agendamentos?page=${p}&size=20`),
@@ -130,10 +135,12 @@ export default function Agendamentos() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.clienteId) {
-      setErro("Seleciona ou cria uma cliente primeiro.");
-      return;
-    }
+    setErro("");
+    if (!form.clienteId) { setErro("Seleciona ou cria uma cliente primeiro."); return; }
+    if (!form.servicoId) { setErro("Seleciona um serviço."); return; }
+    if (!form.profissionalId) { setErro("Seleciona um profissional."); return; }
+    if (!form.dataHora) { setErro("Define a data e hora do agendamento."); return; }
+    if (loading) return;
     setLoading(true);
     try {
       const body = {
@@ -160,21 +167,29 @@ export default function Agendamentos() {
   }
 
   async function handleAtualizarStatus(id, novoStatus) {
+    if (loadingStatusId) return;
+    setLoadingStatusId(id);
     try {
       await put(`/agendamentos/${id}/status`, { status: novoStatus });
       await carregar(pagina);
     } catch (err) {
       setErro(err.message);
+    } finally {
+      setLoadingStatusId(null);
     }
   }
 
-  async function handleApagar(id) {
-    if (!confirm("Tens a certeza?")) return;
+  async function confirmarApagar() {
+    setLoadingApagar(true);
     try {
-      await del(`/agendamentos/${id}`);
+      await del(`/agendamentos/${confirmarApagarId}`);
+      setConfirmarApagarId(null);
       await carregar(pagina);
     } catch (err) {
       setErro(err.message);
+      setConfirmarApagarId(null);
+    } finally {
+      setLoadingApagar(false);
     }
   }
 
@@ -194,14 +209,19 @@ export default function Agendamentos() {
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Agendamentos</h2>
 
-      {erro && <p className="text-red-500 mb-4">{erro}</p>}
+      {erro && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+          <p className="text-red-600 text-sm">{erro}</p>
+          <button onClick={() => setErro("")} className="text-red-400 hover:text-red-600 ml-4 text-lg leading-none">×</button>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
         <h3 className="text-lg font-medium text-gray-700 mb-4">
           {editandoId ? "Editar agendamento" : "Novo agendamento"}
         </h3>
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-          <div className="relative col-span-2">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative md:col-span-2">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -272,7 +292,6 @@ export default function Agendamentos() {
             value={form.servicoId}
             onChange={(e) => setForm({ ...form, servicoId: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           >
             <option value="">Seleciona serviço</option>
             {servicos.map((s) => (
@@ -284,7 +303,6 @@ export default function Agendamentos() {
             value={form.profissionalId}
             onChange={(e) => setForm({ ...form, profissionalId: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           >
             <option value="">Seleciona profissional</option>
             {profissionais.map((p) => (
@@ -297,7 +315,6 @@ export default function Agendamentos() {
             value={form.dataHora}
             onChange={(e) => setForm({ ...form, dataHora: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           />
 
           {editandoId && (
@@ -318,10 +335,10 @@ export default function Agendamentos() {
             placeholder="Observações (opcional)"
             value={form.observacoes}
             onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-            className="col-span-2 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="md:col-span-2 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          <div className={editandoId ? "col-span-2 flex gap-2" : "col-span-2"}>
+          <div className={editandoId ? "md:col-span-2 flex gap-2" : "md:col-span-2"}>
             <button
               type="submit"
               disabled={loading}
@@ -391,64 +408,69 @@ export default function Agendamentos() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        {carregando ? <Spinner /> : <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
-            <tr>
-              <th className="px-6 py-3 text-left">Cliente</th>
-              <th className="px-6 py-3 text-left">Serviço</th>
-              <th className="px-6 py-3 text-left">Profissional</th>
-              <th className="px-6 py-3 text-left">Data e hora</th>
-              <th className="px-6 py-3 text-left">Estado</th>
-              <th className="px-6 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {agendamentosFiltrados.map((a) => (
-              <tr key={a.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium text-gray-800">{a.cliente?.nome}</td>
-                <td className="px-6 py-4 text-gray-600">{a.servico?.nome}</td>
-                <td className="px-6 py-4 text-gray-600">{a.profissional?.nome || "-"}</td>
-                <td className="px-6 py-4 text-gray-600">
-                  {new Date(a.dataHora).toLocaleString("pt-PT")}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeStatus(a.status)}`}>
-                    {a.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right flex gap-3 justify-end">
-                  {a.status !== "CONCLUIDO" && a.status !== "CANCELADO" && (
-                    <button
-                      onClick={() => handleAtualizarStatus(a.id, "CONCLUIDO")}
-                      className="text-blue-500 hover:text-blue-700 text-xs font-medium"
-                    >
-                      Concluir
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleEditar(a)}
-                    className="text-gray-500 hover:text-gray-700 text-xs font-medium"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleApagar(a.id)}
-                    className="text-red-500 hover:text-red-700 text-xs font-medium"
-                  >
-                    Apagar
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {agendamentosFiltrados.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
-                  Nenhum agendamento encontrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>}
+        {carregando ? <Spinner /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-3 text-left">Cliente</th>
+                  <th className="px-6 py-3 text-left">Serviço</th>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">Profissional</th>
+                  <th className="px-6 py-3 text-left">Data e hora</th>
+                  <th className="px-6 py-3 text-left">Estado</th>
+                  <th className="px-6 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {agendamentosFiltrados.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 font-medium text-gray-800">{a.cliente?.nome}</td>
+                    <td className="px-6 py-4 text-gray-600">{a.servico?.nome}</td>
+                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">{a.profissional?.nome || "-"}</td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {new Date(a.dataHora).toLocaleString("pt-PT")}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeStatus(a.status)}`}>
+                        {a.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right flex gap-3 justify-end">
+                      {a.status !== "CONCLUIDO" && a.status !== "CANCELADO" && (
+                        <button
+                          onClick={() => handleAtualizarStatus(a.id, "CONCLUIDO")}
+                          disabled={loadingStatusId === a.id}
+                          className="text-blue-500 hover:text-blue-700 text-xs font-medium disabled:opacity-50"
+                        >
+                          {loadingStatusId === a.id ? "..." : "Concluir"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleEditar(a)}
+                        className="text-gray-500 hover:text-gray-700 text-xs font-medium"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => setConfirmarApagarId(a.id)}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      >
+                        Apagar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {agendamentosFiltrados.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                      Nenhum agendamento encontrado.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {totalPaginas > 1 && (
           <div className="px-6 py-4 border-t flex items-center justify-between text-sm text-gray-600">
@@ -460,6 +482,16 @@ export default function Agendamentos() {
           </div>
         )}
       </div>
+
+      {/* Modal confirmar apagar */}
+      {confirmarApagarId && (
+        <ConfirmModal
+          mensagem="Tens a certeza que queres apagar este agendamento?"
+          onConfirmar={confirmarApagar}
+          onCancelar={() => setConfirmarApagarId(null)}
+          loading={loadingApagar}
+        />
+      )}
 
       {/* Modais de cliente */}
       {novoClienteAberto && (

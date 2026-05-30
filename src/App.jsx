@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Booking from "./pages/Booking";
 
 export default function App() {
   const [autenticado, setAutenticado] = useState(!!localStorage.getItem("token"));
@@ -33,6 +34,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/agendar/:salaoId" element={<Booking />} />
       <Route
         path="/login"
         element={autenticado ? <Navigate to="/inicio" replace /> : <Login onLogin={handleLogin} />}

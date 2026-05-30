@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { get, post, put, del } from "../services/api";
 import Spinner from "../components/Spinner";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
@@ -10,6 +11,8 @@ export default function Produtos() {
   const [editandoId, setEditandoId] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [confirmarApagarId, setConfirmarApagarId] = useState(null);
+  const [loadingApagar, setLoadingApagar] = useState(false);
   const [movProduto, setMovProduto] = useState(null);
   const [movForm, setMovForm] = useState({ tipo: "ENTRADA", quantidade: "", motivo: "" });
   const [historico, setHistorico] = useState([]);
@@ -17,6 +20,7 @@ export default function Produtos() {
 
   async function carregar() {
     setCarregando(true);
+    setErro("");
     try {
       const [data, alerta] = await Promise.all([
         get("/produtos"),
@@ -35,14 +39,18 @@ export default function Produtos() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setErro("");
+    const qtd = parseInt(form.quantidade);
+    const qtdMin = parseInt(form.quantidadeMinima);
+    const preco = form.preco === "" ? null : parseFloat(form.preco);
+    if (!form.nome.trim()) { setErro("O nome do produto é obrigatório."); return; }
+    if (isNaN(qtd) || qtd < 0) { setErro("A quantidade deve ser um número igual ou superior a 0."); return; }
+    if (isNaN(qtdMin) || qtdMin < 0) { setErro("A quantidade mínima deve ser um número igual ou superior a 0."); return; }
+    if (preco !== null && (isNaN(preco) || preco < 0)) { setErro("O preço deve ser um valor positivo."); return; }
+    if (loading) return;
     setLoading(true);
     try {
-      const body = {
-        nome: form.nome,
-        quantidade: parseInt(form.quantidade),
-        quantidadeMinima: parseInt(form.quantidadeMinima),
-        preco: parseFloat(form.preco),
-      };
+      const body = { nome: form.nome.trim(), quantidade: qtd, quantidadeMinima: qtdMin, preco };
       if (editandoId) {
         await put(`/produtos/${editandoId}`, body);
         setEditandoId(null);
@@ -69,13 +77,17 @@ export default function Produtos() {
     setEditandoId(null);
   }
 
-  async function handleApagar(id) {
-    if (!confirm("Tens a certeza?")) return;
+  async function confirmarApagar() {
+    setLoadingApagar(true);
     try {
-      await del(`/produtos/${id}`);
+      await del(`/produtos/${confirmarApagarId}`);
+      setConfirmarApagarId(null);
       await carregar();
     } catch (err) {
       setErro(err.message);
+      setConfirmarApagarId(null);
+    } finally {
+      setLoadingApagar(false);
     }
   }
 
@@ -93,12 +105,15 @@ export default function Produtos() {
 
   async function registarMovimento(e) {
     e.preventDefault();
+    const qtd = parseInt(movForm.quantidade);
+    if (isNaN(qtd) || qtd <= 0) { setErro("A quantidade do movimento deve ser superior a 0."); return; }
+    if (movLoading) return;
     setMovLoading(true);
     try {
       await post("/movimentos-stock", {
         produtoId: movProduto.id,
         tipo: movForm.tipo,
-        quantidade: parseInt(movForm.quantidade),
+        quantidade: qtd,
         motivo: movForm.motivo,
       });
       setMovProduto(null);
@@ -114,7 +129,12 @@ export default function Produtos() {
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Produtos</h2>
 
-      {erro && <p className="text-red-500 mb-4">{erro}</p>}
+      {erro && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+          <p className="text-red-600 text-sm">{erro}</p>
+          <button onClick={() => setErro("")} className="text-red-400 hover:text-red-600 ml-4 text-lg leading-none">×</button>
+        </div>
+      )}
 
       {alertas.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
@@ -131,17 +151,18 @@ export default function Produtos() {
         <h3 className="text-lg font-medium text-gray-700 mb-4">
           {editandoId ? "Editar produto" : "Novo produto"}
         </h3>
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input
             type="text"
             placeholder="Nome"
             value={form.nome}
             onChange={(e) => setForm({ ...form, nome: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           />
           <input
             type="number"
+            min="0"
+            step="0.01"
             placeholder="Preço (€)"
             value={form.preco}
             onChange={(e) => setForm({ ...form, preco: e.target.value })}
@@ -149,21 +170,21 @@ export default function Produtos() {
           />
           <input
             type="number"
+            min="0"
             placeholder="Quantidade atual"
             value={form.quantidade}
             onChange={(e) => setForm({ ...form, quantidade: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           />
           <input
             type="number"
+            min="0"
             placeholder="Quantidade mínima"
             value={form.quantidadeMinima}
             onChange={(e) => setForm({ ...form, quantidadeMinima: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           />
-          <div className="col-span-2 flex gap-2">
+          <div className="md:col-span-2 flex gap-2">
             <button
               type="submit"
               disabled={loading}
@@ -185,57 +206,58 @@ export default function Produtos() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        {carregando ? <Spinner /> : <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
-            <tr>
-              <th className="px-6 py-3 text-left">Código</th>
-              <th className="px-6 py-3 text-left">Nome</th>
-              <th className="px-6 py-3 text-left">Quantidade</th>
-              <th className="px-6 py-3 text-left">Mínimo</th>
-              <th className="px-6 py-3 text-left">Preço</th>
-              <th className="px-6 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {produtos.map((p) => (
-              <tr key={p.id} className={`hover:bg-gray-50 ${p.quantidade < p.quantidadeMinima ? "bg-red-50" : ""}`}>
-                <td className="px-6 py-4 font-mono text-xs text-gray-500">{p.codigo || "—"}</td>
-                <td className="px-6 py-4 font-medium text-gray-800">{p.nome}</td>
-                <td className="px-6 py-4 text-gray-600">{p.quantidade}</td>
-                <td className="px-6 py-4 text-gray-600">{p.quantidadeMinima}</td>
-                <td className="px-6 py-4 text-gray-600">{p.preco ? `${p.preco}€` : "-"}</td>
-                <td className="px-6 py-4 text-right flex gap-3 justify-end">
-                  <button
-                    onClick={() => abrirMovimento(p)}
-                    className="text-green-600 hover:text-green-800 text-xs font-medium"
-                  >
-                    Stock
-                  </button>
-                  <button
-                    onClick={() => handleEditar(p)}
-                    className="text-blue-500 hover:text-blue-700 text-xs font-medium"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleApagar(p.id)}
-                    className="text-red-500 hover:text-red-700 text-xs font-medium"
-                  >
-                    Apagar
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {produtos.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
-                  Nenhum produto registado ainda.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>}
+        {carregando ? <Spinner /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">Código</th>
+                  <th className="px-6 py-3 text-left">Nome</th>
+                  <th className="px-6 py-3 text-left">Qtd</th>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">Mínimo</th>
+                  <th className="px-6 py-3 text-left">Preço</th>
+                  <th className="px-6 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {produtos.map((p) => (
+                  <tr key={p.id} className={`hover:bg-gray-50 ${p.quantidade < p.quantidadeMinima ? "bg-red-50" : ""}`}>
+                    <td className="px-6 py-4 font-mono text-xs text-gray-500 hidden md:table-cell">{p.codigo || "—"}</td>
+                    <td className="px-6 py-4 font-medium text-gray-800">{p.nome}</td>
+                    <td className="px-6 py-4 text-gray-600">{p.quantidade}</td>
+                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">{p.quantidadeMinima}</td>
+                    <td className="px-6 py-4 text-gray-600">{p.preco ? `${p.preco}€` : "-"}</td>
+                    <td className="px-6 py-4 text-right flex gap-3 justify-end">
+                      <button onClick={() => abrirMovimento(p)}
+                        className="text-green-600 hover:text-green-800 text-xs font-medium">Stock</button>
+                      <button onClick={() => handleEditar(p)}
+                        className="text-blue-500 hover:text-blue-700 text-xs font-medium">Editar</button>
+                      <button onClick={() => setConfirmarApagarId(p.id)}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium">Apagar</button>
+                    </td>
+                  </tr>
+                ))}
+                {produtos.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                      Nenhum produto registado ainda.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {confirmarApagarId && (
+        <ConfirmModal
+          mensagem="Tens a certeza que queres apagar este produto?"
+          onConfirmar={confirmarApagar}
+          onCancelar={() => setConfirmarApagarId(null)}
+          loading={loadingApagar}
+        />
+      )}
 
       {/* Modal Movimento de Stock */}
       {movProduto && (
@@ -249,7 +271,7 @@ export default function Produtos() {
                 className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
             <div className="p-6 overflow-y-auto">
-              <form onSubmit={registarMovimento} className="grid grid-cols-2 gap-3 mb-6">
+              <form onSubmit={registarMovimento} className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                 <select value={movForm.tipo}
                   onChange={(e) => setMovForm({ ...movForm, tipo: e.target.value })}
                   className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -261,9 +283,9 @@ export default function Produtos() {
                   className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 <input type="text" placeholder="Motivo (opcional)" value={movForm.motivo}
                   onChange={(e) => setMovForm({ ...movForm, motivo: e.target.value })}
-                  className="col-span-2 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="md:col-span-2 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 <button type="submit" disabled={movLoading}
-                  className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition disabled:opacity-50">
+                  className="md:col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition disabled:opacity-50">
                   {movLoading ? "A registar..." : "Registar movimento"}
                 </button>
               </form>

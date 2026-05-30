@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { get, post, put, del } from "../services/api";
 import Spinner from "../components/Spinner";
+import ConfirmModal from "../components/ConfirmModal";
 import TelemovelInput from "../components/TelemovelInput";
 
 export default function Profissionais() {
@@ -10,9 +11,12 @@ export default function Profissionais() {
   const [editandoId, setEditandoId] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [confirmarApagarId, setConfirmarApagarId] = useState(null);
+  const [loadingApagar, setLoadingApagar] = useState(false);
 
   async function carregar() {
     setCarregando(true);
+    setErro("");
     try {
       const data = await get("/profissionais");
       setProfissionais(data);
@@ -27,13 +31,18 @@ export default function Profissionais() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setErro("");
+    if (!form.nome.trim()) { setErro("O nome do profissional é obrigatório."); return; }
+    const comissao = form.percentualComissao === "" ? 0 : parseFloat(form.percentualComissao);
+    if (isNaN(comissao) || comissao < 0 || comissao > 100) { setErro("A comissão deve ser um valor entre 0 e 100."); return; }
+    if (loading) return;
     setLoading(true);
     try {
       const body = {
-        nome: form.nome,
-        especialidade: form.especialidade,
+        nome: form.nome.trim(),
+        especialidade: form.especialidade.trim(),
         telefone: form.telefone,
-        percentualComissao: form.percentualComissao === "" ? 0 : parseFloat(form.percentualComissao),
+        percentualComissao: comissao,
       };
       if (editandoId) {
         await put(`/profissionais/${editandoId}`, { ...body, ativo: true });
@@ -66,13 +75,17 @@ export default function Profissionais() {
     setEditandoId(null);
   }
 
-  async function handleApagar(id) {
-    if (!confirm("Tens a certeza?")) return;
+  async function confirmarApagar() {
+    setLoadingApagar(true);
     try {
-      await del(`/profissionais/${id}`);
+      await del(`/profissionais/${confirmarApagarId}`);
+      setConfirmarApagarId(null);
       await carregar();
     } catch (err) {
       setErro(err.message);
+      setConfirmarApagarId(null);
+    } finally {
+      setLoadingApagar(false);
     }
   }
 
@@ -80,20 +93,24 @@ export default function Profissionais() {
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Profissionais</h2>
 
-      {erro && <p className="text-red-500 mb-4">{erro}</p>}
+      {erro && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+          <p className="text-red-600 text-sm">{erro}</p>
+          <button onClick={() => setErro("")} className="text-red-400 hover:text-red-600 ml-4 text-lg leading-none">×</button>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
         <h3 className="text-lg font-medium text-gray-700 mb-4">
           {editandoId ? "Editar profissional" : "Novo profissional"}
         </h3>
-        <form onSubmit={handleSubmit} className="grid grid-cols-3 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <input
             type="text"
             placeholder="Nome"
             value={form.nome}
             onChange={(e) => setForm({ ...form, nome: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
           />
           <input
             type="text"
@@ -109,12 +126,12 @@ export default function Profissionais() {
             step="0.01"
             min="0"
             max="100"
-            placeholder="% Comissão"
+            placeholder="% Comissão (0–100)"
             value={form.percentualComissao}
             onChange={(e) => setForm({ ...form, percentualComissao: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <div className="col-span-3 flex gap-2">
+          <div className="md:col-span-3 flex gap-2">
             <button
               type="submit"
               disabled={loading}
@@ -136,59 +153,64 @@ export default function Profissionais() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        {carregando ? <Spinner /> : <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
-            <tr>
-              <th className="px-6 py-3 text-left">Código</th>
-              <th className="px-6 py-3 text-left">Nome</th>
-              <th className="px-6 py-3 text-left">Especialidade</th>
-              <th className="px-6 py-3 text-left">Telemóvel</th>
-              <th className="px-6 py-3 text-left">Comissão</th>
-              <th className="px-6 py-3 text-left">Estado</th>
-              <th className="px-6 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {profissionais.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-mono text-xs text-gray-500">{p.codigo || "—"}</td>
-                <td className="px-6 py-4 font-medium text-gray-800">{p.nome}</td>
-                <td className="px-6 py-4 text-gray-600">{p.especialidade || "-"}</td>
-                <td className="px-6 py-4 text-gray-600">{p.telefone || "-"}</td>
-                <td className="px-6 py-4 text-gray-600">{p.percentualComissao ? `${p.percentualComissao}%` : "—"}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    p.ativo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                  }`}>
-                    {p.ativo ? "Ativo" : "Inativo"}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right flex gap-3 justify-end">
-                  <button
-                    onClick={() => handleEditar(p)}
-                    className="text-blue-500 hover:text-blue-700 text-xs font-medium"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleApagar(p.id)}
-                    className="text-red-500 hover:text-red-700 text-xs font-medium"
-                  >
-                    Apagar
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {profissionais.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
-                  Nenhum profissional registado ainda.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>}
+        {carregando ? <Spinner /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">Código</th>
+                  <th className="px-6 py-3 text-left">Nome</th>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">Especialidade</th>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">Telemóvel</th>
+                  <th className="px-6 py-3 text-left hidden md:table-cell">Comissão</th>
+                  <th className="px-6 py-3 text-left">Estado</th>
+                  <th className="px-6 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {profissionais.map((p) => (
+                  <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 font-mono text-xs text-gray-500 hidden md:table-cell">{p.codigo || "—"}</td>
+                    <td className="px-6 py-4 font-medium text-gray-800">{p.nome}</td>
+                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">{p.especialidade || "-"}</td>
+                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">{p.telefone || "-"}</td>
+                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">{p.percentualComissao ? `${p.percentualComissao}%` : "—"}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        p.ativo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                      }`}>
+                        {p.ativo ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right flex gap-3 justify-end">
+                      <button onClick={() => handleEditar(p)}
+                        className="text-blue-500 hover:text-blue-700 text-xs font-medium">Editar</button>
+                      <button onClick={() => setConfirmarApagarId(p.id)}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium">Apagar</button>
+                    </td>
+                  </tr>
+                ))}
+                {profissionais.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                      Nenhum profissional registado ainda.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {confirmarApagarId && (
+        <ConfirmModal
+          mensagem="Tens a certeza que queres apagar este profissional?"
+          onConfirmar={confirmarApagar}
+          onCancelar={() => setConfirmarApagarId(null)}
+          loading={loadingApagar}
+        />
+      )}
     </div>
   );
 }

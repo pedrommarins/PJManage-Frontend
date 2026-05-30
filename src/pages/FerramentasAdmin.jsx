@@ -5,6 +5,7 @@ import TelemovelInput from "../components/TelemovelInput";
 
 const FERRAMENTAS = [
   { id: "funcionarios", label: "Cadastro de Funcionários", icone: "👥" },
+  { id: "marcacao-online", label: "Marcação Online", icone: "🔗" },
 ];
 
 const NIVEIS = [
@@ -48,6 +49,7 @@ export default function FerramentasAdmin() {
       </div>
 
       {ferramenta === "funcionarios" && <CadastroFuncionarios />}
+      {ferramenta === "marcacao-online" && <LinkMarcacaoOnline />}
     </div>
   );
 }
@@ -374,6 +376,79 @@ function CadastroFuncionarios() {
           </tbody>
         </table>}
       </div>
+    </div>
+  );
+}
+
+function LinkMarcacaoOnline() {
+  const salaoId = localStorage.getItem("salaoId");
+  const link = salaoId ? `${window.location.origin}/agendar/${salaoId}` : null;
+  const [copiado, setCopiado] = useState(false);
+
+  function copiar() {
+    if (!link) return;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    });
+  }
+
+  return (
+    <div>
+      <h3 className="text-lg font-medium text-gray-700 mb-1">🔗 Link de Marcação Online</h3>
+      <p className="text-gray-500 text-sm mb-6">
+        Partilhe este link com os seus clientes para que possam fazer marcações 24/7, sem contacto telefónico.
+      </p>
+
+      {link ? (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
+              URL de marcação pública
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={link}
+                className="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono bg-gray-50 text-gray-700 min-w-0"
+              />
+              <button
+                onClick={copiar}
+                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition shrink-0 ${
+                  copiado ? "bg-green-100 text-green-700 border border-green-200" : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                {copiado ? "Copiado!" : "Copiar"}
+              </button>
+            </div>
+            <div className="flex items-center gap-4 mt-4">
+              <a
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium transition"
+              >
+                Ver página de marcação
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-700">
+            <p className="font-medium mb-1">Como partilhar?</p>
+            <ul className="space-y-1 text-blue-600 text-xs list-disc list-inside">
+              <li>Cole o link na bio do Instagram ou Facebook</li>
+              <li>Envie por WhatsApp ou SMS aos clientes</li>
+              <li>Adicione ao seu website ou Google Meu Negócio</li>
+            </ul>
+          </div>
+        </div>
+      ) : (
+        <p className="text-gray-400 text-sm">Salão não identificado. Faz login novamente.</p>
+      )}
     </div>
   );
 }

@@ -37,10 +37,106 @@ const features = [
 ];
 
 const stats = [
-  { value: "100%", label: "Dados no teu servidor" },
+  { value: "24/7", label: "Marcações online" },
   { value: "24h", label: "Lembretes automáticos" },
   { value: "∞", label: "Clientes e agendamentos" },
 ];
+
+const bookingSteps = [
+  {
+    n: "1",
+    title: "Partilha o link",
+    desc: "O salão recebe um link personalizado para partilhar com os clientes.",
+  },
+  {
+    n: "2",
+    title: "O cliente escolhe",
+    desc: "Serviço, profissional, data e hora disponível — em segundos.",
+  },
+  {
+    n: "3",
+    title: "Marcação confirmada",
+    desc: "O agendamento entra automaticamente no sistema, sem nenhuma ação manual.",
+  },
+];
+
+function BookingMockup() {
+  return (
+    <div className="relative">
+      <div className="bg-[#0a0a1a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-indigo-900/30">
+        {/* Barra de topo */}
+        <div className="border-b border-white/5 px-4 py-3 flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-white/10" />
+            <div className="w-3 h-3 rounded-full bg-white/10" />
+            <div className="w-3 h-3 rounded-full bg-white/10" />
+          </div>
+          <div className="flex-1 mx-4">
+            <div className="bg-white/5 rounded-md h-5 flex items-center px-3">
+              <span className="text-slate-600 text-xs">pjmanage.pt/agendar/1</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {/* Progress */}
+          <div className="flex items-center gap-1.5 mb-4">
+            {[1,2,3,4].map((i) => (
+              <div key={i} className="flex items-center gap-1.5 flex-1 last:flex-none">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs border ${i === 1 ? "bg-indigo-600 border-indigo-600 text-white" : i < 3 ? "bg-indigo-600/60 border-indigo-600/60 text-white" : "border-white/10 text-slate-600"}`}>
+                  {i < 3 ? "✓" : i}
+                </div>
+                {i < 4 && <div className={`flex-1 h-px ${i < 3 ? "bg-indigo-600/60" : "bg-white/10"}`} />}
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-slate-500">Passo 3 de 4 — <span className="text-slate-400">Data & Hora</span></p>
+
+          {/* Calendário mini */}
+          <div className="bg-white/5 border border-white/8 rounded-xl p-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-slate-400 font-medium">Junho 2026</span>
+              <div className="flex gap-1">
+                <div className="w-4 h-4 rounded bg-white/5 text-slate-500 text-xs flex items-center justify-center">‹</div>
+                <div className="w-4 h-4 rounded bg-white/5 text-slate-500 text-xs flex items-center justify-center">›</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-0.5">
+              {["S","T","Q","Q","S","S","D"].map((d,i) => (
+                <div key={i} className="text-center text-slate-600 text-xs py-0.5">{d}</div>
+              ))}
+              {[...Array(5)].map((_,i) => <div key={`e${i}`} />)}
+              {[...Array(30)].map((_,i) => (
+                <div key={i} className={`text-center text-xs py-1 rounded ${i+1 === 14 ? "bg-indigo-600 text-white font-bold" : i+1 < 5 ? "text-slate-700" : "text-slate-400 hover:text-white"}`}>
+                  {i+1}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Slots */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {["09:00","09:30","10:00","10:30","11:00","11:30","14:00","14:30"].map((h, i) => (
+              <div key={h} className={`py-1.5 rounded-lg text-xs font-medium text-center border transition ${i === 3 ? "bg-indigo-600 border-indigo-600 text-white" : "border-white/10 text-slate-400"}`}>
+                {h}
+              </div>
+            ))}
+          </div>
+
+          <button className="w-full bg-indigo-600 text-white text-xs font-semibold py-2.5 rounded-lg mt-1">
+            Continuar →
+          </button>
+        </div>
+      </div>
+
+      {/* Badge flutuante */}
+      <div className="absolute -top-3 -right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg shadow-green-900/40">
+        Marcação confirmada!
+      </div>
+    </div>
+  );
+}
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -89,7 +185,7 @@ export default function Landing() {
         </h1>
 
         <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-          Agendamentos, clientes, stock, relatórios e muito mais.
+          Agendamentos, clientes, stock, relatórios e marcações online 24/7.
           Tudo num só lugar, para que te focuses no que realmente importa — o teu negócio.
         </p>
 
@@ -104,7 +200,7 @@ export default function Landing() {
       </div>
 
       {/* Stats */}
-      <div className="relative z-10 max-w-4xl mx-auto px-8 pb-16">
+      <div className="relative z-10 max-w-4xl mx-auto px-8 pb-20">
         <div className="grid grid-cols-3 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5">
           {stats.map((s) => (
             <div key={s.label} className="bg-[#060612] px-8 py-6 text-center">
@@ -112,6 +208,47 @@ export default function Landing() {
               <p className="text-slate-500 text-sm">{s.label}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Marcação Online — secção de destaque */}
+      <div className="relative z-10 max-w-6xl mx-auto px-8 pb-28">
+        <div className="bg-gradient-to-br from-indigo-900/25 to-violet-900/15 border border-indigo-700/25 rounded-3xl p-8 md:p-14">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Texto */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 text-indigo-400 text-xs font-semibold mb-6 uppercase tracking-wide">
+                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                Novo
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
+                Os seus clientes marcam online,{" "}
+                <span className="text-indigo-400">a qualquer hora</span>
+              </h2>
+              <p className="text-slate-400 leading-relaxed mb-8">
+                Partilhe o seu link de marcação nas redes sociais, WhatsApp ou website. Os clientes agendam em segundos, sem telefonemas, sem esperas.
+              </p>
+
+              <div className="space-y-5">
+                {bookingSteps.map((step) => (
+                  <div key={step.n} className="flex items-start gap-4">
+                    <div className="w-7 h-7 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xs font-bold shrink-0 mt-0.5">
+                      {step.n}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium text-sm mb-0.5">{step.title}</p>
+                      <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Mockup */}
+            <div className="hidden md:block">
+              <BookingMockup />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -138,7 +275,9 @@ export default function Landing() {
       <div className="relative z-10 max-w-2xl mx-auto px-8 pb-24 text-center">
         <div className="bg-gradient-to-br from-indigo-900/40 to-violet-900/20 border border-indigo-800/30 rounded-3xl p-12">
           <h2 className="text-3xl font-bold text-white mb-4">Pronto para começar?</h2>
-          <p className="text-slate-400 mb-8">Faz login e começa a gerir o teu salão agora mesmo.</p>
+          <p className="text-slate-400 mb-8">
+            Faz login e activa as marcações online do teu salão hoje mesmo.
+          </p>
           <button
             onClick={() => navigate("/login")}
             className="bg-white text-slate-900 hover:bg-slate-100 px-8 py-3.5 rounded-xl text-sm font-semibold transition-all hover:scale-105"
