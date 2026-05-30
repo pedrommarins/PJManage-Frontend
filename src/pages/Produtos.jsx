@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { get, post, put, del } from "../services/api";
+import Spinner from "../components/Spinner";
 
 export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
@@ -7,9 +8,15 @@ export default function Produtos() {
   const [erro, setErro] = useState("");
   const [form, setForm] = useState({ nome: "", quantidade: "", quantidadeMinima: "", preco: "" });
   const [editandoId, setEditandoId] = useState(null);
+  const [carregando, setCarregando] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [movProduto, setMovProduto] = useState(null);
+  const [movForm, setMovForm] = useState({ tipo: "ENTRADA", quantidade: "", motivo: "" });
+  const [historico, setHistorico] = useState([]);
+  const [movLoading, setMovLoading] = useState(false);
 
   async function carregar() {
+    setCarregando(true);
     try {
       const [data, alerta] = await Promise.all([
         get("/produtos"),
@@ -19,6 +26,8 @@ export default function Produtos() {
       setAlertas(alerta);
     } catch (err) {
       setErro(err.message);
+    } finally {
+      setCarregando(false);
     }
   }
 
@@ -67,6 +76,37 @@ export default function Produtos() {
       await carregar();
     } catch (err) {
       setErro(err.message);
+    }
+  }
+
+  async function abrirMovimento(p) {
+    setMovProduto(p);
+    setMovForm({ tipo: "ENTRADA", quantidade: "", motivo: "" });
+    setHistorico([]);
+    try {
+      const data = await get(`/movimentos-stock/produto/${p.id}`);
+      setHistorico(data);
+    } catch {
+      setHistorico([]);
+    }
+  }
+
+  async function registarMovimento(e) {
+    e.preventDefault();
+    setMovLoading(true);
+    try {
+      await post("/movimentos-stock", {
+        produtoId: movProduto.id,
+        tipo: movForm.tipo,
+        quantidade: parseInt(movForm.quantidade),
+        motivo: movForm.motivo,
+      });
+      setMovProduto(null);
+      await carregar();
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setMovLoading(false);
     }
   }
 
@@ -145,7 +185,7 @@ export default function Produtos() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        {carregando ? <Spinner /> : <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
             <tr>
               <th className="px-6 py-3 text-left">Código</th>
@@ -165,6 +205,12 @@ export default function Produtos() {
                 <td className="px-6 py-4 text-gray-600">{p.quantidadeMinima}</td>
                 <td className="px-6 py-4 text-gray-600">{p.preco ? `${p.preco}€` : "-"}</td>
                 <td className="px-6 py-4 text-right flex gap-3 justify-end">
+                  <button
+                    onClick={() => abrirMovimento(p)}
+                    className="text-green-600 hover:text-green-800 text-xs font-medium"
+                  >
+                    Stock
+                  </button>
                   <button
                     onClick={() => handleEditar(p)}
                     className="text-blue-500 hover:text-blue-700 text-xs font-medium"
@@ -188,8 +234,76 @@ export default function Produtos() {
               </tr>
             )}
           </tbody>
-        </table>
+        </table>}
       </div>
+
+      {/* Modal Movimento de Stock */}
+      {movProduto && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">
+                Stock — {movProduto.nome} <span className="text-gray-400 font-normal">({movProduto.quantidade} un.)</span>
+              </h3>
+              <button onClick={() => setMovProduto(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <form onSubmit={registarMovimento} className="grid grid-cols-2 gap-3 mb-6">
+                <select value={movForm.tipo}
+                  onChange={(e) => setMovForm({ ...movForm, tipo: e.target.value })}
+                  className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="ENTRADA">Entrada</option>
+                  <option value="SAIDA">Saída</option>
+                </select>
+                <input type="number" min="1" placeholder="Quantidade" value={movForm.quantidade}
+                  onChange={(e) => setMovForm({ ...movForm, quantidade: e.target.value })}
+                  className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <input type="text" placeholder="Motivo (opcional)" value={movForm.motivo}
+                  onChange={(e) => setMovForm({ ...movForm, motivo: e.target.value })}
+                  className="col-span-2 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <button type="submit" disabled={movLoading}
+                  className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition disabled:opacity-50">
+                  {movLoading ? "A registar..." : "Registar movimento"}
+                </button>
+              </form>
+
+              <h4 className="text-sm font-semibold text-gray-600 mb-2">Histórico</h4>
+              {historico.length === 0 ? (
+                <p className="text-sm text-gray-400">Sem movimentos registados.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Data</th>
+                      <th className="px-3 py-2 text-left">Tipo</th>
+                      <th className="px-3 py-2 text-left">Qtd</th>
+                      <th className="px-3 py-2 text-left">Saldo</th>
+                      <th className="px-3 py-2 text-left">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {historico.map((m) => (
+                      <tr key={m.id}>
+                        <td className="px-3 py-2 text-gray-500">{new Date(m.data).toLocaleString("pt-PT")}</td>
+                        <td className="px-3 py-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            m.tipo === "ENTRADA" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                            {m.tipo}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-gray-600">{m.quantidade}</td>
+                        <td className="px-3 py-2 text-gray-600">{m.quantidadeResultante}</td>
+                        <td className="px-3 py-2 text-gray-500">{m.motivo || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

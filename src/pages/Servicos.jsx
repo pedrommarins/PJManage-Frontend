@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
 import { get, post, put, del } from "../services/api";
+import Spinner from "../components/Spinner";
 
 export default function Servicos() {
   const [servicos, setServicos] = useState([]);
   const [erro, setErro] = useState("");
   const [form, setForm] = useState({ nome: "", preco: "", duracaoMinutos: "" });
   const [editandoId, setEditandoId] = useState(null);
+  const [carregando, setCarregando] = useState(true);
   const [loading, setLoading] = useState(false);
 
   async function carregar() {
+    setCarregando(true);
     try {
       const data = await get("/servicos");
       setServicos(data);
     } catch (err) {
       setErro(err.message);
+    } finally {
+      setCarregando(false);
     }
   }
 
@@ -120,7 +125,7 @@ export default function Servicos() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        {carregando ? <Spinner /> : <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
             <tr>
               <th className="px-6 py-3 text-left">Nome</th>
@@ -161,7 +166,7 @@ export default function Servicos() {
               </tr>
             )}
           </tbody>
-        </table>
+        </table>}
       </div>
     </div>
   );

@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+button, a, [role="button"] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Sublinhado ao hover em botões-texto (exclui botões com fundo ou borda colorida) */
+button:not([class*='bg-']):not(:disabled):hover,
+a:hover {
+  text-decoration: underline;
+}

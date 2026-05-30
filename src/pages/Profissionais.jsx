@@ -1,19 +1,25 @@
 import { useEffect, useState } from "react";
 import { get, post, put, del } from "../services/api";
+import Spinner from "../components/Spinner";
+import TelemovelInput from "../components/TelemovelInput";
 
 export default function Profissionais() {
   const [profissionais, setProfissionais] = useState([]);
   const [erro, setErro] = useState("");
-  const [form, setForm] = useState({ nome: "", especialidade: "", telefone: "" });
+  const [form, setForm] = useState({ nome: "", especialidade: "", telefone: "", percentualComissao: "" });
   const [editandoId, setEditandoId] = useState(null);
+  const [carregando, setCarregando] = useState(true);
   const [loading, setLoading] = useState(false);
 
   async function carregar() {
+    setCarregando(true);
     try {
       const data = await get("/profissionais");
       setProfissionais(data);
     } catch (err) {
       setErro(err.message);
+    } finally {
+      setCarregando(false);
     }
   }
 
@@ -23,13 +29,19 @@ export default function Profissionais() {
     e.preventDefault();
     setLoading(true);
     try {
+      const body = {
+        nome: form.nome,
+        especialidade: form.especialidade,
+        telefone: form.telefone,
+        percentualComissao: form.percentualComissao === "" ? 0 : parseFloat(form.percentualComissao),
+      };
       if (editandoId) {
-        await put(`/profissionais/${editandoId}`, { ...form, ativo: true });
+        await put(`/profissionais/${editandoId}`, { ...body, ativo: true });
         setEditandoId(null);
       } else {
-        await post("/profissionais", form);
+        await post("/profissionais", body);
       }
-      setForm({ nome: "", especialidade: "", telefone: "" });
+      setForm({ nome: "", especialidade: "", telefone: "", percentualComissao: "" });
       await carregar();
     } catch (err) {
       setErro(err.message);
@@ -39,13 +51,18 @@ export default function Profissionais() {
   }
 
   function handleEditar(p) {
-    setForm({ nome: p.nome, especialidade: p.especialidade || "", telefone: p.telefone || "" });
+    setForm({
+      nome: p.nome,
+      especialidade: p.especialidade || "",
+      telefone: p.telefone || "",
+      percentualComissao: p.percentualComissao ?? "",
+    });
     setEditandoId(p.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleCancelar() {
-    setForm({ nome: "", especialidade: "", telefone: "" });
+    setForm({ nome: "", especialidade: "", telefone: "", percentualComissao: "" });
     setEditandoId(null);
   }
 
@@ -85,11 +102,16 @@ export default function Profissionais() {
             onChange={(e) => setForm({ ...form, especialidade: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <TelemovelInput value={form.telefone}
+            onChange={(v) => setForm({ ...form, telefone: v })} />
           <input
-            type="text"
-            placeholder="Telefone"
-            value={form.telefone}
-            onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            placeholder="% Comissão"
+            value={form.percentualComissao}
+            onChange={(e) => setForm({ ...form, percentualComissao: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <div className="col-span-3 flex gap-2">
@@ -114,13 +136,14 @@ export default function Profissionais() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        {carregando ? <Spinner /> : <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
             <tr>
               <th className="px-6 py-3 text-left">Código</th>
               <th className="px-6 py-3 text-left">Nome</th>
               <th className="px-6 py-3 text-left">Especialidade</th>
-              <th className="px-6 py-3 text-left">Telefone</th>
+              <th className="px-6 py-3 text-left">Telemóvel</th>
+              <th className="px-6 py-3 text-left">Comissão</th>
               <th className="px-6 py-3 text-left">Estado</th>
               <th className="px-6 py-3"></th>
             </tr>
@@ -132,6 +155,7 @@ export default function Profissionais() {
                 <td className="px-6 py-4 font-medium text-gray-800">{p.nome}</td>
                 <td className="px-6 py-4 text-gray-600">{p.especialidade || "-"}</td>
                 <td className="px-6 py-4 text-gray-600">{p.telefone || "-"}</td>
+                <td className="px-6 py-4 text-gray-600">{p.percentualComissao ? `${p.percentualComissao}%` : "—"}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     p.ativo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
@@ -157,13 +181,13 @@ export default function Profissionais() {
             ))}
             {profissionais.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                   Nenhum profissional registado ainda.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
+        </table>}
       </div>
     </div>
   );

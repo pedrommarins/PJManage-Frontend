@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 
 export default function App() {
-  const [autenticado, setAutenticado] = useState(
-    !!localStorage.getItem("token")
-  );
+  const [autenticado, setAutenticado] = useState(!!localStorage.getItem("token"));
+
+  useEffect(() => {
+    function onLogout() {
+      setAutenticado(false);
+    }
+    window.addEventListener("auth:logout", onLogout);
+    return () => window.removeEventListener("auth:logout", onLogout);
+  }, []);
 
   function handleLogin() {
     setAutenticado(true);
@@ -15,14 +23,29 @@ export default function App() {
     localStorage.removeItem("token");
     localStorage.removeItem("userNome");
     localStorage.removeItem("salaoId");
+    localStorage.removeItem("role");
+    localStorage.removeItem("nivel");
     setAutenticado(false);
   }
 
   const userNome = localStorage.getItem("userNome") || "";
 
-  return autenticado ? (
-    <Dashboard onLogout={handleLogout} userNome={userNome} />
-  ) : (
-    <Login onLogin={handleLogin} />
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route
+        path="/login"
+        element={autenticado ? <Navigate to="/inicio" replace /> : <Login onLogin={handleLogin} />}
+      />
+      <Route
+        path="/:pagina"
+        element={
+          autenticado
+            ? <Dashboard onLogout={handleLogout} userNome={userNome} />
+            : <Navigate to="/login" replace />
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

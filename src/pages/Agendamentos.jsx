@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { get, post, put, del } from "../services/api";
+import Spinner from "../components/Spinner";
+import {
+  HistoricoModal, FichasModal, PontosModal, ContaModal, NovoClienteModal,
+} from "../components/ClienteModais";
 
 export default function Agendamentos() {
   const [agendamentos, setAgendamentos] = useState([]);
@@ -19,8 +23,10 @@ export default function Agendamentos() {
     status: "CONFIRMADO",
     observacoes: "",
   });
+  const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [pesquisa, setPesquisa] = useState("");
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+  const [carregando, setCarregando] = useState(true);
   const [loading, setLoading] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [filtroData, setFiltroData] = useState("");
@@ -28,7 +34,12 @@ export default function Agendamentos() {
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
 
+  // Modais de cliente
+  const [modalCliente, setModalCliente] = useState(null); // 'fichas'|'pontos'|'conta'|'historico'
+  const [novoClienteAberto, setNovoClienteAberto] = useState(false);
+
   async function carregar(p = pagina) {
+    setCarregando(true);
     try {
       const [ag, cl, sv, pr] = await Promise.all([
         get(`/agendamentos?page=${p}&size=20`),
@@ -44,6 +55,8 @@ export default function Agendamentos() {
       setProfissionais(pr);
     } catch (err) {
       setErro(err.message);
+    } finally {
+      setCarregando(false);
     }
   }
 
@@ -54,9 +67,16 @@ export default function Agendamentos() {
   );
 
   function selecionarCliente(cliente) {
-    setForm({ ...form, clienteId: cliente.id, clienteNome: cliente.nome });
+    setForm((f) => ({ ...f, clienteId: cliente.id, clienteNome: cliente.nome }));
+    setClienteSelecionado(cliente);
     setPesquisa(cliente.nome);
     setMostrarSugestoes(false);
+  }
+
+  function aoCriarCliente(criado) {
+    setClientes((lista) => [criado, ...lista]);
+    selecionarCliente(criado);
+    setNovoClienteAberto(false);
   }
 
   const agendamentosFiltrados = agendamentos.filter((a) => {
@@ -84,6 +104,7 @@ export default function Agendamentos() {
   function handleEditar(a) {
     setEditandoId(a.id);
     setPesquisa(a.cliente?.nome || "");
+    setClienteSelecionado(a.cliente || null);
     setForm({
       clienteId: a.cliente?.id || "",
       clienteNome: a.cliente?.nome || "",
@@ -96,16 +117,21 @@ export default function Agendamentos() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function handleCancelarEdicao() {
-    setEditandoId(null);
+  function resetForm() {
     setForm({ clienteId: "", clienteNome: "", servicoId: "", profissionalId: "", dataHora: "", status: "CONFIRMADO", observacoes: "" });
     setPesquisa("");
+    setClienteSelecionado(null);
+  }
+
+  function handleCancelarEdicao() {
+    setEditandoId(null);
+    resetForm();
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.clienteId) {
-      setErro("Seleciona um cliente da lista de sugestões.");
+      setErro("Seleciona ou cria uma cliente primeiro.");
       return;
     }
     setLoading(true);
@@ -124,8 +150,7 @@ export default function Agendamentos() {
       } else {
         await post("/agendamentos", body);
       }
-      setForm({ clienteId: "", clienteNome: "", servicoId: "", profissionalId: "", dataHora: "", status: "CONFIRMADO", observacoes: "" });
-      setPesquisa("");
+      resetForm();
       await carregar(pagina);
     } catch (err) {
       setErro(err.message);
@@ -163,6 +188,8 @@ export default function Agendamentos() {
     }
   }
 
+  const botaoAcao = "text-xs font-medium px-2 py-1 rounded-md border transition";
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Agendamentos</h2>
@@ -175,19 +202,29 @@ export default function Agendamentos() {
         </h3>
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
           <div className="relative col-span-2">
-            <input
-              type="text"
-              placeholder="Pesquisar cliente pelo nome..."
-              value={pesquisa}
-              onChange={(e) => {
-                setPesquisa(e.target.value);
-                setForm({ ...form, clienteId: "", clienteNome: "" });
-                setMostrarSugestoes(true);
-              }}
-              onFocus={() => setMostrarSugestoes(true)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {mostrarSugestoes && clientesFiltrados.length > 0 && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Pesquisar cliente pelo nome..."
+                value={pesquisa}
+                onChange={(e) => {
+                  setPesquisa(e.target.value);
+                  setForm({ ...form, clienteId: "", clienteNome: "" });
+                  setClienteSelecionado(null);
+                  setMostrarSugestoes(true);
+                }}
+                onFocus={() => setMostrarSugestoes(true)}
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setNovoClienteAberto(true)}
+                className="px-4 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg whitespace-nowrap"
+              >
+                + Nova cliente
+              </button>
+            </div>
+            {mostrarSugestoes && pesquisa.length > 0 && (
               <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
                 {clientesFiltrados.map((c) => (
                   <button
@@ -199,12 +236,35 @@ export default function Agendamentos() {
                     {c.nome} {c.telefone ? `— ${c.telefone}` : ""}
                   </button>
                 ))}
+                {clientesFiltrados.length === 0 && (
+                  <div className="px-4 py-3 text-sm text-gray-500 flex items-center justify-between">
+                    <span>Nenhuma cliente com "{pesquisa}".</span>
+                    <button
+                      type="button"
+                      onClick={() => setNovoClienteAberto(true)}
+                      className="text-green-600 hover:text-green-800 font-medium"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-            {form.clienteId && (
-              <p className="text-xs text-green-600 mt-1">
-                ✓ Cliente selecionado: {form.clienteNome}
-              </p>
+            {clienteSelecionado && (
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-green-600">
+                  ✓ {clienteSelecionado.nome}
+                  {clienteSelecionado.pontos != null ? ` · ${clienteSelecionado.pontos} pts` : ""}
+                </span>
+                <button type="button" onClick={() => setModalCliente("historico")}
+                  className={`${botaoAcao} border-purple-200 text-purple-600 hover:bg-purple-50`}>Histórico</button>
+                <button type="button" onClick={() => setModalCliente("fichas")}
+                  className={`${botaoAcao} border-teal-200 text-teal-600 hover:bg-teal-50`}>Fichas</button>
+                <button type="button" onClick={() => setModalCliente("pontos")}
+                  className={`${botaoAcao} border-amber-200 text-amber-600 hover:bg-amber-50`}>Pontos</button>
+                <button type="button" onClick={() => setModalCliente("conta")}
+                  className={`${botaoAcao} border-indigo-200 text-indigo-600 hover:bg-indigo-50`}>Conta</button>
+              </div>
             )}
           </div>
 
@@ -306,7 +366,7 @@ export default function Agendamentos() {
           onChange={(e) => setFiltroStatus(e.target.value)}
           className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Todos os status</option>
+          <option value="">Todos os estados</option>
           <option value="CONFIRMADO">Confirmado</option>
           <option value="PENDENTE">Pendente</option>
           <option value="CANCELADO">Cancelado</option>
@@ -331,14 +391,14 @@ export default function Agendamentos() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        {carregando ? <Spinner /> : <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
             <tr>
               <th className="px-6 py-3 text-left">Cliente</th>
               <th className="px-6 py-3 text-left">Serviço</th>
               <th className="px-6 py-3 text-left">Profissional</th>
               <th className="px-6 py-3 text-left">Data e hora</th>
-              <th className="px-6 py-3 text-left">Status</th>
+              <th className="px-6 py-3 text-left">Estado</th>
               <th className="px-6 py-3"></th>
             </tr>
           </thead>
@@ -399,7 +459,30 @@ export default function Agendamentos() {
               className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-50">Seguinte →</button>
           </div>
         )}
+        </table>}
       </div>
+
+      {/* Modais de cliente */}
+      {novoClienteAberto && (
+        <NovoClienteModal
+          profissionais={profissionais}
+          onClose={() => setNovoClienteAberto(false)}
+          onCriado={aoCriarCliente}
+        />
+      )}
+      {clienteSelecionado && modalCliente === "historico" && (
+        <HistoricoModal cliente={clienteSelecionado} onClose={() => setModalCliente(null)} />
+      )}
+      {clienteSelecionado && modalCliente === "fichas" && (
+        <FichasModal cliente={clienteSelecionado} profissionais={profissionais} onClose={() => setModalCliente(null)} />
+      )}
+      {clienteSelecionado && modalCliente === "pontos" && (
+        <PontosModal cliente={clienteSelecionado} onClose={() => setModalCliente(null)}
+          onChange={(pts) => setClienteSelecionado((c) => ({ ...c, pontos: pts }))} />
+      )}
+      {clienteSelecionado && modalCliente === "conta" && (
+        <ContaModal cliente={clienteSelecionado} onClose={() => setModalCliente(null)} />
+      )}
     </div>
   );
 }
