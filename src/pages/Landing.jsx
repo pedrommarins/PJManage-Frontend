@@ -47,7 +47,7 @@ const features = [
   {
     icon: "M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z",
     title: "Multi-utilizador",
-    desc: "Administrador, receção e profissional — cada um com o seu nível de acesso.",
+    desc: "Administrador, receção e profissional, cada um com o seu nível de acesso.",
     color: "text-rose-400", bg: "bg-rose-500/10 border-rose-500/20",
   },
 ];
@@ -68,7 +68,7 @@ const planIncludes = [
 const faqs = [
   {
     q: "Preciso de instalar alguma aplicação?",
-    a: "Não. O PJManage é 100% web — funciona em qualquer dispositivo com browser, sem instalações.",
+    a: "Não. O PJManage é 100% web, funciona em qualquer dispositivo com browser, sem instalações.",
   },
   {
     q: "Como funciona a marcação online?",
@@ -110,7 +110,7 @@ function BookingMockup() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-slate-500">Passo 3 de 4 — <span className="text-slate-400">Data & Hora</span></p>
+          <p className="text-xs text-slate-500">Passo 3 de 4: <span className="text-slate-400">Data e Hora</span></p>
           <div className="bg-white/5 border border-white/8 rounded-xl p-3">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs text-slate-400 font-medium">Junho 2026</span>
@@ -262,7 +262,7 @@ export default function Landing() {
           </span>
         </h1>
         <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-          Gestão completa de agendamentos, clientes e stock — mais marcações online 24/7 para os seus clientes marcarem sem telefonar.
+          Gestão completa de agendamentos, clientes e stock, com marcações online 24/7 para os seus clientes agendarem sem precisar de telefonar.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -276,7 +276,7 @@ export default function Landing() {
             onClick={() => scrollTo(contactoRef)}
             className="border border-white/15 hover:border-white/30 text-slate-300 hover:text-white px-8 py-4 rounded-xl text-base font-medium transition hover:bg-white/5"
           >
-            Falar connosco
+            Falar conosco
           </button>
         </div>
       </section>
@@ -329,12 +329,12 @@ export default function Landing() {
                 <span className="text-indigo-400">a qualquer hora</span>
               </h2>
               <p className="text-slate-400 leading-relaxed mb-8">
-                Partilhe o seu link de marcação nas redes sociais, WhatsApp ou website. Os clientes escolhem o serviço, o profissional, a data e a hora — em segundos, sem telefonemas.
+                Partilhe o seu link de marcação nas redes sociais, WhatsApp ou website. Os clientes escolhem o serviço, o profissional, a data e a hora em segundos, sem telefonemas.
               </p>
               <div className="space-y-5">
                 {[
                   { n: "1", title: "Partilha o link", desc: "Recebe um link personalizado para partilhar com os seus clientes." },
-                  { n: "2", title: "O cliente escolhe", desc: "Serviço, profissional, data e hora disponível — em segundos." },
+                  { n: "2", title: "O cliente escolhe", desc: "Serviço, profissional, data e hora disponível, em segundos." },
                   { n: "3", title: "Entra no sistema automaticamente", desc: "O agendamento aparece no dashboard sem nenhuma ação manual." },
                 ].map(step => (
                   <div key={step.n} className="flex items-start gap-4">
@@ -412,7 +412,7 @@ export default function Landing() {
 
       {/* ── Formulário de contacto ────────────────────────────────── */}
       <section ref={contactoRef} className="relative z-10 max-w-2xl mx-auto px-6 pb-28 scroll-mt-8">
-        <h2 className="text-center text-2xl font-bold text-white mb-2">Fale connosco</h2>
+        <h2 className="text-center text-2xl font-bold text-white mb-2">Fale conosco</h2>
         <p className="text-center text-slate-400 text-sm mb-10">
           Preencha o formulário e entramos em contacto em menos de 24h.
         </p>
