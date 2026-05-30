@@ -468,22 +468,24 @@ export default function Booking() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Email</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Email *</label>
                     <input
                       type="email"
                       value={form.email}
                       onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                       placeholder="email@exemplo.com"
+                      required
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Telemóvel</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Telemóvel *</label>
                     <input
                       type="tel"
                       value={form.telefone}
                       onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
                       placeholder="+351 9XX XXX XXX"
+                      required
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     />
                   </div>
@@ -508,7 +510,7 @@ export default function Booking() {
                   </button>
                   <button
                     onClick={submeter}
-                    disabled={!form.nome.trim() || enviando}
+                    disabled={!form.nome.trim() || !form.email.trim() || !form.telefone.trim() || enviando}
                     className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg shadow-indigo-900/40 flex items-center gap-2"
                   >
                     {enviando ? (
