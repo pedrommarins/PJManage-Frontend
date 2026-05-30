@@ -103,7 +103,7 @@ export default function Dashboard({ onLogout, userNome }) {
       <aside className="w-60 bg-slate-900 flex flex-col fixed inset-y-0 left-0 z-30">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/5">
-          <img src="/logo.png" alt="PJManage" className="h-20 w-auto brightness-0 invert opacity-90" />
+          <img src="/logo.png" alt="PJManage" className="h-28 w-auto brightness-0 invert opacity-90" />
         </div>
 
         {/* Navegação */}
