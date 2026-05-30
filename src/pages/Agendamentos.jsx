@@ -459,7 +459,6 @@ export default function Agendamentos() {
               className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-50">Seguinte →</button>
           </div>
         )}
-        </table>}
       </div>
 
       {/* Modais de cliente */}
