@@ -213,14 +213,17 @@ export default function Booking() {
         {/* Sucesso */}
         {passo === 4 ? (
           <div className="text-center py-12">
-            <div className="w-20 h-20 bg-green-500/20 border-2 border-green-500/40 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            <div className="w-20 h-20 bg-amber-500/20 border-2 border-amber-500/40 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">Marcação confirmada!</h2>
-            <p className="text-slate-400 text-sm mb-8 leading-relaxed">
-              A sua marcação foi registada com sucesso.<br />Aguardamos a sua visita!
+            <h2 className="text-2xl font-bold text-white mb-3">Pedido recebido!</h2>
+            <p className="text-slate-400 text-sm mb-2 leading-relaxed">
+              O seu pedido de marcação está <span className="text-amber-400 font-medium">pendente de aprovação</span>.
+            </p>
+            <p className="text-slate-500 text-sm mb-8">
+              Receberá um email de confirmação assim que o salão aprovar a marcação.
             </p>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-left max-w-sm mx-auto space-y-3 text-sm mb-8">
               <div className="flex justify-between gap-4">
