@@ -448,7 +448,7 @@ export default function Agendamentos() {
               </tr>
             )}
           </tbody>
-        </table>
+        </table>}
 
         {totalPaginas > 1 && (
           <div className="px-6 py-4 border-t flex items-center justify-between text-sm text-gray-600">
