@@ -88,7 +88,7 @@ function Calendario({ mesVista, setMesVista, dataSel, onSelect }) {
 const PASSOS = ["Serviço", "Profissional", "Data & Hora", "Os seus dados"];
 
 export default function Booking() {
-  const { salaoId } = useParams();
+  const { slug } = useParams();
   const [passo, setPasso] = useState(0);
 
   const [servicos, setServicos] = useState([]);
@@ -115,8 +115,8 @@ export default function Booking() {
     async function init() {
       try {
         const [s, p] = await Promise.all([
-          publicGet(`/public/saloes/${salaoId}/servicos`),
-          publicGet(`/public/saloes/${salaoId}/profissionais`),
+          publicGet(`/public/saloes/${slug}/servicos`),
+          publicGet(`/public/saloes/${slug}/profissionais`),
         ]);
         setServicos(s);
         setProfissionais(p);
@@ -137,7 +137,7 @@ export default function Booking() {
     try {
       const iso = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
       const result = await publicGet(
-        `/public/saloes/${salaoId}/disponibilidade?profissionalId=${profissionalSel.id}&servicoId=${servicoSel.id}&dia=${iso}`
+        `/public/saloes/${slug}/disponibilidade?profissionalId=${profissionalSel.id}&servicoId=${servicoSel.id}&dia=${iso}`
       );
       setSlots(result);
     } catch (err) {
@@ -156,7 +156,7 @@ export default function Booking() {
     setErroEnvio("");
     setEnviando(true);
     try {
-      await publicPost(`/public/saloes/${salaoId}/marcacoes`, {
+      await publicPost(`/public/saloes/${slug}/marcacoes`, {
         nome: form.nome,
         email: form.email || null,
         telefone: form.telefone || null,

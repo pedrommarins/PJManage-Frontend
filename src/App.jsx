@@ -34,7 +34,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/agendar/:salaoId" element={<Booking />} />
+      <Route path="/agendar/:slug" element={<Booking />} />
       <Route
         path="/login"
         element={autenticado ? <Navigate to="/inicio" replace /> : <Login onLogin={handleLogin} />}

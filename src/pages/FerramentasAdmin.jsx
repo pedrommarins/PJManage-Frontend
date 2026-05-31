@@ -380,10 +380,53 @@ function CadastroFuncionarios() {
   );
 }
 
+function sanitizarSlug(v) {
+  return v
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function LinkMarcacaoOnline() {
-  const salaoId = localStorage.getItem("salaoId");
-  const link = salaoId ? `${window.location.origin}/agendar/${salaoId}` : null;
+  const [salao, setSalao] = useState(null);
+  const [slugEdit, setSlugEdit] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [erroSlug, setErroSlug] = useState("");
+  const [sucessoSlug, setSucessoSlug] = useState(false);
   const [copiado, setCopiado] = useState(false);
+
+  useEffect(() => {
+    get("/saloes/meu").then(s => {
+      setSalao(s);
+      setSlugEdit(s.slug || "");
+    }).catch(() => {});
+  }, []);
+
+  const link = salao?.slug ? `${window.location.origin}/agendar/${salao.slug}` : null;
+
+  function handleSlugChange(e) {
+    setSlugEdit(sanitizarSlug(e.target.value));
+    setErroSlug("");
+    setSucessoSlug(false);
+  }
+
+  async function guardarSlug(e) {
+    e.preventDefault();
+    if (slugEdit.length < 3) { setErroSlug("Mínimo 3 caracteres."); return; }
+    setErroSlug("");
+    setGuardando(true);
+    try {
+      const atualizado = await put("/saloes/meu/slug", { slug: slugEdit });
+      setSalao(atualizado);
+      setSucessoSlug(true);
+      setTimeout(() => setSucessoSlug(false), 3000);
+    } catch (err) {
+      setErroSlug(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   function copiar() {
     if (!link) return;
@@ -393,51 +436,87 @@ function LinkMarcacaoOnline() {
     });
   }
 
+  const inputCls = "border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
+
+  if (!salao) return <div className="py-8 text-center text-gray-400 text-sm">A carregar...</div>;
+
   return (
-    <div>
-      <h3 className="text-lg font-medium text-gray-700 mb-1">🔗 Link de Marcação Online</h3>
-      <p className="text-gray-500 text-sm mb-6">
-        Partilhe este link com os seus clientes para que possam fazer marcações 24/7, sem contacto telefónico.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium text-gray-700 mb-1">🔗 Link de Marcação Online</h3>
+        <p className="text-gray-500 text-sm">
+          Personalize o link do seu salão e partilhe com os clientes para marcações 24/7.
+        </p>
+      </div>
 
-      {link ? (
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
-              URL de marcação pública
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={link}
-                className="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-mono bg-gray-50 text-gray-700 min-w-0"
-              />
-              <button
-                onClick={copiar}
-                className={`px-5 py-2.5 rounded-lg text-sm font-medium transition shrink-0 ${
-                  copiado ? "bg-green-100 text-green-700 border border-green-200" : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                {copiado ? "Copiado!" : "Copiar"}
-              </button>
-            </div>
-            <div className="flex items-center gap-4 mt-4">
-              <a
-                href={link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium transition"
-              >
-                Ver página de marcação
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                </svg>
-              </a>
-            </div>
+      {/* Personalizar link */}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <label className="block text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">
+          Personalizar link do salão
+        </label>
+        <form onSubmit={guardarSlug} className="space-y-3">
+          <div className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+            <span className="bg-gray-50 px-3 py-2.5 text-gray-400 text-sm border-r border-gray-300 whitespace-nowrap shrink-0">
+              {window.location.origin}/agendar/
+            </span>
+            <input
+              type="text"
+              value={slugEdit}
+              onChange={handleSlugChange}
+              placeholder="nome-do-salao"
+              className="flex-1 px-3 py-2.5 text-sm text-gray-800 focus:outline-none min-w-0"
+            />
           </div>
+          <p className="text-xs text-gray-400">
+            Apenas letras minúsculas, números e hífens. Ex: <span className="font-mono">salao-da-maria</span>
+          </p>
+          {erroSlug && <p className="text-xs text-red-500">{erroSlug}</p>}
+          {sucessoSlug && <p className="text-xs text-green-600">Link atualizado com sucesso!</p>}
+          <button
+            type="submit"
+            disabled={guardando || slugEdit === salao.slug}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition"
+          >
+            {guardando ? "A guardar..." : "Guardar link"}
+          </button>
+        </form>
+      </div>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-700">
+      {/* Link atual */}
+      {link && (
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+            Seu link atual
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={link}
+              className={`flex-1 ${inputCls} bg-gray-50 text-gray-700 font-mono min-w-0`}
+            />
+            <button
+              onClick={copiar}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition shrink-0 ${
+                copiado ? "bg-green-100 text-green-700 border border-green-200" : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              {copiado ? "Copiado!" : "Copiar"}
+            </button>
+          </div>
+          <a
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium transition"
+          >
+            Ver página de marcação
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+          </a>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
             <p className="font-medium mb-1">Como partilhar?</p>
             <ul className="space-y-1 text-blue-600 text-xs list-disc list-inside">
               <li>Cole o link na bio do Instagram ou Facebook</li>
@@ -446,8 +525,6 @@ function LinkMarcacaoOnline() {
             </ul>
           </div>
         </div>
-      ) : (
-        <p className="text-gray-400 text-sm">Salão não identificado. Faz login novamente.</p>
       )}
     </div>
   );
