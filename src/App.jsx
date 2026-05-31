@@ -4,6 +4,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Booking from "./pages/Booking";
+import RespostaMarcacao from "./pages/RespostaMarcacao";
 
 export default function App() {
   const [autenticado, setAutenticado] = useState(!!localStorage.getItem("token"));
@@ -35,6 +36,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/agendar/:slug" element={<Booking />} />
+      <Route path="/resposta-marcacao" element={<RespostaMarcacao />} />
       <Route
         path="/login"
         element={autenticado ? <Navigate to="/inicio" replace /> : <Login onLogin={handleLogin} />}
